@@ -1,0 +1,42 @@
+# --- Secrets (never commit) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+credentials.json
+secrets/
+
+# --- Real data (never commit; use synthetic fixtures) ---
+data/raw/
+data/real/
+data/prod/
+*.parquet
+*_real.csv
+*_prod.*
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+
+# --- Node / TS ---
+node_modules/
+dist/
+build/
+coverage/
+.next/
+
+# --- OS / editors ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

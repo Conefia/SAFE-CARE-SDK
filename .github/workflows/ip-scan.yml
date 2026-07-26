@@ -1,0 +1,32 @@
+name: IP & secret scan
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Forbidden-pattern scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          # NOTE: the real client-name / internal-identifier denylist must NOT be committed to this
+          # public repo (listing your clients here would itself be a leak). Keep the sensitive list in
+          # the private engine repo or as an org secret, and extend this pattern from it in CI.
+          PATTERN='-----BEGIN (RSA|OPENSSH|EC|PGP) PRIVATE KEY-----|AKIA[0-9A-Z]{16}|(api[_-]?key|secret|password|token)[[:space:]]*[:=][[:space:]]*["'"'"'][A-Za-z0-9/+_-]{12,}'
+          if grep -rInE "$PATTERN" --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.github . ; then
+            echo "::error::Potential secret or forbidden pattern found. Blocking merge. See IP-BOUNDARY.md."
+            exit 1
+          fi
+          echo "No forbidden patterns found."
