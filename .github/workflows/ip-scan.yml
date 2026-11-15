@@ -26,7 +26,19 @@ jobs:
         run: |
           set -euo pipefail
           PATTERN='-----BEGIN (RSA|OPENSSH|EC|PGP) PRIVATE KEY-----|AKIA[0-9A-Z]{16}|(api[_-]?key|secret|password|token)[[:space:]]*[:=][[:space:]]*["'"'"'][A-Za-z0-9/+_-]{12,}'
-          if grep -rInE "$PATTERN" --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.github . ; then
+          # -e: the pattern starts with "-----", so without it grep reads the pattern as an option,
+          # exits 2, and an `if grep` reads that as "no match". The scan then passed whatever it saw.
+          status=0
+          matches=$(grep -rInE -e "$PATTERN" --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.github .) || status=$?
+          if [ "$status" -gt 1 ]; then
+            echo "::error::The forbidden-pattern scan could not run (grep exit $status). Blocking merge."
+            exit 1
+          fi
+          # A reviewed line is kept by an "ip-scan: allow" comment on it, with the reason, e.g. a
+          # synthetic value in a test. Adding one is visible in the PR's diff, like any other change.
+          found=$(printf '%s\n' "$matches" | grep -v 'ip-scan: allow' | grep -v '^$' || true)
+          if [ -n "$found" ]; then
+            printf '%s\n' "$found"
             echo "::error::Potential secret or forbidden pattern found. Blocking merge. See IP-BOUNDARY.md."
             exit 1
           fi
